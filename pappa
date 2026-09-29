@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape Room: Il Seminterrato di Newton</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #game-container {
+            background-color: #262626;
+            padding: 30px;
+            border: 2px solid #555;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        h1 { text-align: center; color: #ff3300; border-bottom: 1px solid #555; padding-bottom: 10px; }
+        .room-info { margin-bottom: 20px; font-size: 1.1em; line-height: 1.5; }
+        .input-area { margin-top: 20px; }
+        input[type="text"] {
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            width: 70%;
+            font-family: inherit;
+        }
+        button {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover { background: #666; }
+        .option {
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #444;
+        }
+        .option:hover { background: #333; }
+        #hint-box {
+            margin-top: 20px;
+            padding: 10px;
+            background: #442200;
+            border: 1px solid #ff9900;
+            color: #ffcc00;
+            display: none;
+        }
+        #progress { text-align: right; font-size: 0.8em; color: #888; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="progress">Stanza: <span id="current-room-num">1</span>/15</div>
+    <h1>Seminterrato Abbandonato</h1>
+    <div id="room-content">
+        <!-- Contenuto dinamico via JS -->
+    </div>
+    <div id="hint-box"></div>
+</div>
+
+<script>
+const rooms = [
+    {
+        title: "Stanza 1: L'Origine",
+        desc: "Su un monitor lampeggiante leggi: 'Quale branca della meccanica descrive il moto dei corpi senza curarsi delle cause che lo producono?' [1]",
+        type: "open",
+        answer: "cinematica",
+        hint: "Si distingue dalla dinamica perché non studia le forze [1]."
+    },
+    {
+        title: "Stanza 2: Il Sensore di Velocità",
+        desc: "Un sensore laser segna che un detrito ha percorso 10 metri in 2 secondi. Qual è la sua velocità media? [1]",
+        type: "choice",
+        options: ["A) 20 m/s", "B) 5 m/s", "C) 0.2 m/s"],
+        answer: 1, // B
+        hint: "La velocità media è il rapporto tra spostamento e intervallo di tempo [1, 2]."
+    },
+    {
+        title: "Stanza 3: La Caduta",
+        desc: "Un bullone cade da un'altezza di 10m. Trascurando l'attrito, con quale velocità raggiunge il suolo? [3, 4]",
+        type: "choice",
+        options: ["A) 14 m/s", "B) 9.8 m/s", "C) 98 m/s"],
+        answer: 0, // A
+        hint: "Usa la formula della caduta dei gravi: v = radice quadrata di (2 * g * h) [4]."
+    },
+    {
+        title: "Stanza 4: L'Oggetto Immobile",
+        desc: "Un baule resta fermo se non applici una forza. Quale principio di Newton spiega questa tendenza a mantenere lo stato di quiete? [5, 6]",
+        type: "open",
+        answer: "principio di inerzia",
+        hint: "È noto anche come primo principio della dinamica [5]."
+    },
+    {
+        title: "Stanza 5: La Porta d'Acciaio",
+        desc: "Per muovere la porta, devi applicare una forza a una massa di 1000 kg per darle un'accelerazione di 5 m/s². Quanti Newton servono? [7, 8]",
+        type: "open",
+        answer: "5000",
+        hint: "La legge è F = m * a [7]."
+    },
+    {
+        title: "Stanza 6: Angolo di Lancio",
+        desc: "Per lanciare un oggetto alla massima distanza orizzontale possibile (gittata massima), che angolo devi usare? [5, 9]",
+        type: "choice",
+        options: ["A) 30°", "B) 45°", "C) 90°"],
+        answer: 1, // B
+        hint: "La gittata massima si ha quando sin(2θ) è massimo [5]."
+    },
+    {
+        title: "Stanza 7: Liquido Ignoto",
+        desc: "Trovi un barile di liquido con densità 920 kg/m³. Consultando i registri, di cosa si tratta? [10-12]",
+        type: "choice",
+        options: ["A) Acqua", "B) Olio d'oliva", "C) Mercurio"],
+        answer: 1, // B
+        hint: "L'acqua ha densità 1000 kg/m³, questo liquido è meno denso [11]."
+    },
+    {
+        title: "Stanza 8: Unità di Misura",
+        desc: "Un manometro arrugginito riporta la pressione. Qual è l'unità di misura S.I. della pressione? [13, 14]",
+        type: "open",
+        answer: "pascal",
+        hint: "Corrisponde a un Newton su metro quadrato [13, 14]."
+    },
+    {
+        title: "Stanza 9: La Pressa Idraulica",
+        desc: "Schiacciando un fluido confinato, la pressione si trasmette ovunque inalterata. Come si chiama questo principio? [15, 16]",
+        type: "open",
+        answer: "principio di pascal",
+        hint: "Prende il nome dal fisico Blaise Pascal (1652) [15]."
+    },
+    {
+        title: "Stanza 10: La Vasca Allagata",
+        desc: "Una vasca è alta 5m. Qual è la pressione idrostatica (sovrapressione) sul fondo dovuta all'acqua (1000 kg/m³)? [17-19]",
+        type: "choice",
+        options: ["A) 49000 Pa", "B) 101325 Pa", "C) 500 Pa"],
+        answer: 0, // A
+        hint: "Applica la legge di Stevino: p = densità * g * h [18]."
+    },
+    {
+        title: "Stanza 11: Il Galleggiante",
+        desc: "Un pezzo di legno riceve una spinta verso l'alto pari al peso del volume di fluido spostato. Di che spinta si tratta? [20, 21]",
+        type: "open",
+        answer: "spinta di archimede",
+        hint: "È il principio che regola il galleggiamento dei corpi [21]."
+    },
+    {
+        title: "Stanza 12: Il Tubo Stretto",
+        desc: "L'acqua passa da un tubo largo a uno stretto. Cosa succede alla sua velocità? [22, 23]",
+        type: "choice",
+        options: ["A) Diminuisce", "B) Aumenta", "C) Resta uguale"],
+        answer: 1, // B
+        hint: "Secondo l'equazione di continuità, se la sezione diminuisce, la velocità deve compensare [23]."
+    },
+    {
+        title: "Stanza 13: La Strozzatura",
+        desc: "Sempre nel tubo che si restringe, cosa succede alla pressione del fluido ideale nella parte stretta? [24, 25]",
+        type: "choice",
+        options: ["A) Aumenta", "B) Diminuisce", "C) Resta uguale"],
+        answer: 1, // B
+        hint: "Il teorema di Bernoulli prevede una caduta di pressione dove la velocità è maggiore [25]."
+    },
+    {
+        title: "Stanza 14: Gravità Lunare",
+        desc: "Un astronauta di 70kg pesa 686N sulla Terra. Qual è il suo peso approssimativo sulla Luna? [26]",
+        type: "choice",
+        options: ["A) 686 N", "B) 113 N", "C) 0 N"],
+        answer: 1, // B
+        hint: "La gravità sulla Luna è circa 1/6 di quella terrestre [26]."
+    },
+    {
+        title: "Stanza 15: L'Uscita",
+        desc: "Per sbloccare l'ultima porta, imposta il valore della pressione atmosferica standard in millimetri di mercurio (esperimento di Torricelli). [27, 28]",
+        type: "choice",
+        options: ["A) 1000 mm", "B) 760 mm", "C) 10.34 mm"],
+        answer: 1, // B
+        hint: "È l'altezza della colonna di mercurio che bilancia 1 atm al livello del mare [28]."
+    }
+];
+
+let currentRoom = 0;
+let errorsInRoom = 0;
+
+function loadRoom() {
+    const room = rooms[currentRoom];
+    errorsInRoom = 0;
+    document.getElementById('current-room-num').innerText = currentRoom + 1;
+    document.getElementById('hint-box').style.display = 'none';
+    
+    let html = `<div class="room-info"><strong>${room.title}</strong><p>${room.desc}</p></div>`;
+    
+    if (room.type === "open") {
+        html += `<div class="input-area">
+                    <input type="text" id="answer-input" placeholder="Scrivi la risposta...">
+                    <button onclick="checkAnswer()">Invia</button>
+                 </div>`;
+    } else {
+        html += `<div class="input-area">`;
+        room.options.forEach((opt, idx) => {
+            html += `<div class="option" onclick="checkChoice(${idx})">${opt}</div>`;
+        });
+        html += `</div>`;
+    }
+    document.getElementById('room-content').innerHTML = html;
+}
+
+function checkAnswer() {
+    const userAns = document.getElementById('answer-input').value.toLowerCase().trim();
+    if (userAns.includes(rooms[currentRoom].answer)) {
+        nextRoom();
+    } else {
+        handleError();
+    }
+}
+
+function checkChoice(idx) {
+    if (idx === rooms[currentRoom].answer) {
+        nextRoom();
+    } else {
+        handleError();
+    }
+}
+
+function handleError() {
+    errorsInRoom++;
+    const hintBox = document.getElementById('hint-box');
+    hintBox.innerText = "Sbagliato! " + rooms[currentRoom].hint;
+    hintBox.style.display = 'block';
+}
+
+function nextRoom() {
+    currentRoom++;
+    if (currentRoom < rooms.length) {
+        loadRoom();
+    } else {
+        document.getElementById('game-container').innerHTML = `
+            <h1>LIBERO!</h1>
+            <p style="text-align:center">Hai superato tutte le stanze e dimostrato la tua conoscenza della fisica. La porta si apre verso la libertà.</p>
+            <button onclick="location.reload()" style="display:block; margin: 20px auto;">Rigioca</button>
+        `;
+    }
+}
+
+loadRoom();
+</script>
+</body>
+</html>
